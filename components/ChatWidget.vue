@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from "vue"
+import DOMPurify from "dompurify"
+import MarkdownIt from "markdown-it"
 
 type ChatMessage = {
   role: "user" | "assistant"
@@ -15,11 +17,55 @@ const greeting = "Moin, ich bin EXO der Agent von Train Hybrid. Wie kann ich dir
 
 const canSend = computed(() => input.value.trim().length > 0 && !isLoading.value)
 
+const markdown = new MarkdownIt({
+  html: false,
+  linkify: true,
+  breaks: true,
+})
+
+const defaultLinkRender =
+  markdown.renderer.rules.link_open ??
+  ((tokens, idx, options, _env, self) => self.renderToken(tokens, idx, options))
+
+markdown.renderer.rules.link_open = (tokens, idx, options, env, self) => {
+  tokens[idx].attrSet("target", "_blank")
+  tokens[idx].attrSet("rel", "noopener noreferrer")
+  return defaultLinkRender(tokens, idx, options, env, self)
+}
+
+const renderMessageMarkdown = (value: string) => {
+  const rawHtml = markdown.render((value || "").trim())
+
+  // RED-FLAG (SENIOR APPROVAL REQUIRED) [Jan Sugint]:
+  // `v-html` ist sicherheitskritisch.
+  // Änderungen an erlaubten Tags/Attributen müssen von einem Senior geprüft werden.
+  // Strict allowlist for assistant markdown output.
+  return DOMPurify.sanitize(rawHtml, {
+    ALLOWED_TAGS: ["h1", "h2", "h3", "h4", "p", "ul", "ol", "li", "strong", "em", "a", "br", "code"],
+    ALLOWED_ATTR: ["href", "target", "rel"],
+    ALLOW_DATA_ATTR: false,
+  })
+}
+
 const scrollToBottom = async () => {
   await nextTick()
   if (messageListRef.value) {
     messageListRef.value.scrollTop = messageListRef.value.scrollHeight
   }
+}
+
+const scrollToLatestAssistantStart = async () => {
+  await nextTick()
+  if (!messageListRef.value) return
+
+  const assistantMessages = messageListRef.value.querySelectorAll<HTMLDivElement>(
+    ".chat-widget__message.is-assistant"
+  )
+  const lastAssistant = assistantMessages[assistantMessages.length - 1]
+  if (!lastAssistant) return
+
+  const top = Math.max(0, lastAssistant.offsetTop - 8)
+  messageListRef.value.scrollTo({ top, behavior: "auto" })
 }
 
 const sendToServer = async (content: string) => {
@@ -37,7 +83,7 @@ const sendToServer = async (content: string) => {
     })
   } finally {
     isLoading.value = false
-    await scrollToBottom()
+    await scrollToLatestAssistantStart()
   }
 }
 
@@ -100,7 +146,11 @@ const toggleOpen = () => {
             message.role === 'user' ? 'is-user' : 'is-assistant',
           ]"
         >
-          {{ message.content }}
+          <!-- RED-FLAG (SENIOR APPROVAL REQUIRED) [Jan Sugint]: Sanitized HTML rendering -->
+          <div v-if="message.role === 'assistant'" class="chat-widget__markdown" v-html="renderMessageMarkdown(message.content)" />
+          <template v-else>
+            {{ message.content }}
+          </template>
         </div>
         <div v-if="isLoading" class="chat-widget__message is-assistant">
           …
@@ -244,19 +294,59 @@ const toggleOpen = () => {
   border-radius: 14px;
   font-size: 14px;
   line-height: 1.4;
-  white-space: pre-wrap;
+  white-space: normal;
 }
 
 .chat-widget__message.is-user {
   align-self: flex-end;
   background: #111827;
   color: #fff;
+  white-space: pre-wrap;
 }
 
 .chat-widget__message.is-assistant {
   align-self: flex-start;
   background: #e5e7eb;
   color: #111827;
+}
+
+.chat-widget__markdown :deep(h3) {
+  margin: 0 0 4px;
+  font-size: 15px;
+  line-height: 1.3;
+  font-weight: 700;
+}
+
+.chat-widget__markdown :deep(p) {
+  margin: 0 0 6px;
+}
+
+.chat-widget__markdown :deep(ul) {
+  margin: 0 0 6px;
+  padding-left: 18px;
+}
+
+.chat-widget__markdown :deep(li) {
+  margin: 0 0 2px;
+}
+
+.chat-widget__markdown :deep(h1:last-child),
+.chat-widget__markdown :deep(h2:last-child),
+.chat-widget__markdown :deep(h3:last-child),
+.chat-widget__markdown :deep(h4:last-child),
+.chat-widget__markdown :deep(p:last-child),
+.chat-widget__markdown :deep(ul:last-child),
+.chat-widget__markdown :deep(ol:last-child) {
+  margin-bottom: 0;
+}
+
+.chat-widget__markdown :deep(strong) {
+  font-weight: 700;
+}
+
+.chat-widget__markdown :deep(a) {
+  color: #1f2937;
+  text-decoration: underline;
 }
 
 .chat-widget__input {

@@ -1,7 +1,7 @@
 ---
 title: "Warum Ausdauertraining dich nicht vor Muskelabbau schützt"
 description: "Warum Ausdauer allein nicht reicht und wie gezielte Kraftintegration den Unterschied macht."
-category: "Praxis"
+category: "Wissen"
 date: 2026-02-14
 ---
 

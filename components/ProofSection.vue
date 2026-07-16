@@ -69,7 +69,7 @@ const rowB = [...testimonials.slice().reverse(), ...testimonials.slice().reverse
 .proof-section {
   position: relative;
   overflow: hidden;
-  background: rgba(251, 109, 62, 0.65);
+  background: rgba(255, 106, 0, 0.45);
 }
 
 .proof-header {

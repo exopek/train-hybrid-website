@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue"
+import { nextTick } from "vue"
 import ButtonShine from "~/components/ButtonShine.vue"
 import {
   sectionBackgroundStyles,
@@ -19,43 +19,40 @@ const benefitsRef = ref<HTMLElement | null>(null)
 const props = withDefaults(
   defineProps<{
     bgStyle?: SectionBackgroundStyle
-    headlineHtml?: string
+    headline?: string
     seoHead?: string
     subhead?: string
     body?: string
-    rotatingWords?: string[]
-    benefitsLabelTop?: string
-    benefitsLabelBottom?: string
-    benefitsItems?: string[]
-    ctaLabel?: string
+    listHead?: string
+    lineOne?: string
+    lineTwo?: string
+    lineThree?: string
+    lineFour?: string
   }>(),
   {
-    bgStyle: "light",
-    headlineHtml:
-      "Ausdauer hält<br> dich fit.<br> Muskeln halten<br> dich&nbsp;",
-    seoHead: "KRAFTTRAINING FUR AUSDAUERSPORTLER: INTEGRIERTES TRAIN HYBRID OHNE EXTRA EINHEITEN.",
-    subhead: "Kilometer sammeln kann jeder. Belastbar werden nur die, die Kraft integrieren.",
+    bgStyle: "night",
+    headline: "Ausdauer hält dich leistungsfähig. Muskeln halten dich belastbar.",
+    seoHead: "KRAFTTRAINING FUR AUSDAUERSPORTLER: INTEGRIERTES HYBRID TRAINING OHNE EXTRA EINHEITEN.",
+    subhead: "Du trainierst vielleicht genug. Aber nicht vollständig",
     body:
-      "Deine Herz-Kreislauf-Fitness und eine hohe VO₂max sind zentrale Faktoren im Ausdauertraining – egal ob du regelmäßig läufst, Rad fährst oder einfach aktiv bleiben willst. Doch ohne gezieltes Krafttraining fehlt deinem Körper die strukturelle Basis für Stabilität, Kraftübertragung und Gelenkschutz. Genau hier setzt train hybrid für Ausdauersportler an. Wir integrieren effektives Krafttraining für Läufer, Radfahrer und aktive Menschen systematisch in die bestehende Ausdauer-Routine – ohne zusätzliche Trainingstage. So verbindest du Krafttraining und Ausdauertraining sinnvoll miteinander, steigerst deine Belastbarkeit im Alltag und entwickelst langfristige athletische Stabilität – die Grundlage für ambitionierte Ziele wie Marathon, Halbmarathon, lange Radrennen oder einfach Leistungsfähigkeit bis ins hohe Alter.",
-    rotatingWords: ["jung.", "stark.", "stabil."],
-    benefitsLabelTop: "TRAIN",
-    benefitsLabelBottom: "HYBRID",
-    benefitsItems: ["Mehr Muskelmasse.", "Mehr Stabilität.", "Mehr Belastbarkeit."],
-    ctaLabel: "Mehr erfahren",
+      "Deine Herz-Kreislauf-Fitness und eine hohe VO₂max sind zentrale Faktoren im Ausdauertraining – egal ob du regelmäßig läufst, Rad fährst oder einfach aktiv bleiben willst. Doch ohne gezieltes Krafttraining fehlt die muskuläre Basis für Stabilität, Kraftübertragung und Gelenkschutz. Genau hier setzt unser Hybrid Training für Ausdauersportler an. Wir integrieren effektives Krafttraining für Läufer und Radfahrer direkt in deine bestehende Ausdauer-Routine – beim Laufen oder Radsport - egal ob Rennrad oder Gravelbike. So verbindest du Krafttraining und Ausdauertraining sinnvoll miteinander, steigerst deine Belastbarkeit im Alltag, entwickelst langfristige athletische Stabilität und schaffst die Grundlage für anspruchsvolle Ziele wie Marathon oder Halbmarathon.",
+    listHead: "Deine Vorteile:",
+    lineOne:
+      "Mehr Muskelmasse.",
+    lineTwo:
+      "Mehr Stabilität.",
+    lineThree:
+      "Mehr Belastbarkeit.",
   },
 )
 
 const sectionClass = computed(() => sectionBackgroundStyles[props.bgStyle])
-const goToBlog = () => {
-  navigateTo("/blog")
-}
 let cleanupHeadline: (() => void) | null = null
 let cleanupSubhead: (() => void) | null = null
 let cleanupBody: (() => void) | null = null
 let cleanupBenefits: (() => void) | null = null
-let benefitsTrigger: ScrollTrigger | null = null
 
-const rotatingWords = computed(() => props.rotatingWords ?? [])
+const rotatingWords = ["jung.", "stark.", "stabil."] as const
 const rotatingIndex = ref(0)
 const rotatingRef = ref<HTMLElement | null>(null)
 const benefitsLineRef = ref<HTMLSpanElement | null>(null)
@@ -64,9 +61,6 @@ const rotatingReady = ref(false)
 const benefitsAnimated = ref(false)
 let rotateTimer: ReturnType<typeof setInterval> | null = null
 let cleanupRotate: (() => void) | null = null
-const currentRotatingWord = computed(
-  () => rotatingWords.value[rotatingIndex.value] ?? "",
-)
 
 const animateBenefitsLabel = () => {
   if (benefitsLineRef.value || benefitsLabelTextRef.value) {
@@ -120,10 +114,14 @@ const rotateWord = () => {
     duration: 0.2,
     ease: "power2.in",
     onComplete: async () => {
-      rotatingIndex.value = (rotatingIndex.value + 1) % Math.max(rotatingWords.value.length, 1)
+      rotatingIndex.value = (rotatingIndex.value + 1) % rotatingWords.length
       await nextTick()
       gsap.set(rotatingRef.value, { opacity: 1, y: 0 })
       animateRotatingWord()
+      if (rotatingIndex.value === 1 && !benefitsAnimated.value) {
+        benefitsAnimated.value = true
+        animateBenefitsLabel()
+      }
     },
   })
 }
@@ -192,22 +190,6 @@ onMounted(async () => {
   cleanupBody = cleanupSubhead
   cleanupBenefits = cleanupSubhead
 
-  if (sectionRef.value) {
-    benefitsTrigger = ScrollTrigger.create({
-      trigger: sectionRef.value,
-      start: () => {
-        if (!sectionRef.value) return 0
-        return sectionRef.value.offsetTop + window.innerHeight * 0.25
-      },
-      once: true,
-      onEnter: () => {
-        if (benefitsAnimated.value) return
-        benefitsAnimated.value = true
-        animateBenefitsLabel()
-      },
-    })
-  }
-
 })
 
 onBeforeUnmount(() => {
@@ -219,8 +201,6 @@ onBeforeUnmount(() => {
   cleanupBody = null
   cleanupBenefits?.()
   cleanupBenefits = null
-  benefitsTrigger?.kill()
-  benefitsTrigger = null
   cleanupRotate?.()
   cleanupRotate = null
   if (rotateTimer) {
@@ -234,7 +214,7 @@ onBeforeUnmount(() => {
   <section
     id="integration-section"
     ref="sectionRef"
-    :class="['bg-white', 'text-neutral-900', 'lg:h-[95vh]']"
+    :class="['bg-slate-100', 'text-neutral-900', 'lg:h-[95vh]']"
   >
     <div class="mx-auto max-w-6xl px-6 py-20 sm:py-28 lg:h-full lg:py-32">
       <div class="grid items-stretch gap-10 text-left lg:h-full lg:grid-cols-[1.2fr_0.8fr] lg:gap-16">
@@ -244,7 +224,15 @@ onBeforeUnmount(() => {
             {{ props.seoHead }}
           </p>
             <p class="HeadlineGsapSplitText text-[4rem] font-semibold leading-tight">
-              <span ref="headlineRef" v-html="props.headlineHtml"></span>
+              <span ref="headlineRef">
+                Ausdauer hält
+                <br />
+                dich fit.
+                <br />
+                Muskeln halten
+                <br />
+                dich&nbsp;
+              </span>
               <span
                 :key="rotatingIndex"
                 ref="rotatingRef"
@@ -253,7 +241,7 @@ onBeforeUnmount(() => {
                   rotatingReady ? 'is-ready' : 'is-hidden',
                 ]"
               >
-                {{ currentRotatingWord }}
+                {{ rotatingWords[rotatingIndex] }}
               </span>
             </p>
             <p ref="subheadRef" class="text-xl font-semibold text-neutral-700 sm:text-2xl">
@@ -273,18 +261,18 @@ onBeforeUnmount(() => {
               aria-hidden="true"
             ></span>
             <span ref="benefitsLabelTextRef" class="benefits-label__text">
-              {{ props.benefitsLabelTop }}
+              HYBRID
               <span class="benefits-label__break"></span>
-              {{ props.benefitsLabelBottom }}
+              TRAINING
             </span>
           </div>
           <div class="mt-4 flex flex-col gap-4 text-[2rem] font-semibold leading-tight text-black">
-            <div v-for="(item, idx) in props.benefitsItems" :key="`${item}-${idx}`">
-              {{ item }}
-            </div>
+            <div>Mehr Muskelmasse.</div>
+            <div>Mehr Stabilität.</div>
+            <div>Mehr Belastbarkeit.</div>
           </div>
           <div class="mt-10">
-            <ButtonShine :label="props.ctaLabel" @click="goToBlog" />
+            <ButtonShine label="Mehr erfahren" />
           </div>
         </div>
       </div>
@@ -315,7 +303,7 @@ onBeforeUnmount(() => {
 .benefits-label__line {
   width: 3px;
   height: 100%;
-  background: var(--color-brand-accent);
+  background: #ff6a00;
   border-radius: 999px;
 }
 
@@ -348,6 +336,6 @@ onBeforeUnmount(() => {
   font-weight: 300;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--color-text-secondary);
+  color: rgba(15, 23, 42, 0.6);
 }
 </style>
